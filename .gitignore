@@ -6,3 +6,6 @@ build/
 *.xcuserstate
 *.bak
 fog-machine-reference/
+
+# Personal Fog of World location data used as local test fixtures.
+FOW File Examples/

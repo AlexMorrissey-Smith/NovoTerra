@@ -1,0 +1,561 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0C97EF13AF3166E356572769 /* iCloudFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6152C07E64D53ADF82F7F359 /* iCloudFileManager.swift */; };
+		1EEBFCFAFE5E2B5C31BE9F03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929715637283B5EF9D7A3FEE /* ContentView.swift */; };
+		1FA339C05043FBF29D6185EF /* RoutePlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CACD79F96A4228E6E54DF8D /* RoutePlannerView.swift */; };
+		333A6A355A2923D4010DE74A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13EB6ABC28457DE28F6868F8 /* Models.swift */; };
+		3979184C4F37EEFDD1367957 /* FOWDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6003CE0DE3F38AD5037DCC /* FOWDataManager.swift */; };
+		3B5126F012CC1CCBA8F15C01 /* NovoterraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E0552CE3276F9FDCD1733D3 /* NovoterraApp.swift */; };
+		6162D0AC32E13A7EBAE5E302 /* FOWParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71564605DDF677728942F65A /* FOWParser.swift */; };
+		6969A764A6746601A9DC3E26 /* SWCompression in Frameworks */ = {isa = PBXBuildFile; productRef = 9CA7F121DA6EE0FE3A2C8A3B /* SWCompression */; };
+		8296D43752636DA2F2FDCB5F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E432EC054A5DA21A73366E2E /* Assets.xcassets */; };
+		8A1F9D89668278C2ACA9E05E /* RouteCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23342410998A3BDA1290C8AB /* RouteCardView.swift */; };
+		B26A0CC578CC67D8CE9032EC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A28595245689241122D43E /* SettingsView.swift */; };
+		B9F6CA5F9DD382728D3DA430 /* NavigationHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24B24188D68EB56C520D8E26 /* NavigationHandoff.swift */; };
+		C7415B1F2F0BAC41001B82FE /* LocalFileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7415B1E2F0BAC41001B82FE /* LocalFileCache.swift */; };
+		C7415B212F0BCDD2001B82FE /* SearchHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7415B202F0BCDD2001B82FE /* SearchHistoryManager.swift */; };
+		C7415B2A2F0C918C001B82FE /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = C7415B292F0C918C001B82FE /* AppIcon.icon */; };
+		C7415B2C2F0C986C001B82FE /* RouteOptionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7415B2B2F0C986C001B82FE /* RouteOptionCard.swift */; };
+		C7415B2E2F0CAB51001B82FE /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7415B2D2F0CAB51001B82FE /* RouteMapView.swift */; };
+		CA0EADF972724E574A3EE260 /* RoutePlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F849AC521C4AFC6A8A10C70 /* RoutePlanner.swift */; };
+		DB00E51CDF9BC79F20E96D41 /* FOWSpatialIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A87422141D2478876771EC /* FOWSpatialIndex.swift */; };
+		EA49113E2A498C19B8B6E4A1 /* MercatorProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE286C8F3E017F2EA01CDAC5 /* MercatorProjection.swift */; };
+		F60C58082F2DAA7828FA9BD2 /* LocationSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1548A6A70AA49214231C466C /* LocationSearchService.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A7621AB0EF8A2BB55F125B25 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E0DAD250887951274C734BCE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0C5B14A4C319A8727CADACC2;
+			remoteInfo = Novoterra;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		004AC8752448474217887E1D /* NovoTerraTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NovoTerraTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		13EB6ABC28457DE28F6868F8 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		1548A6A70AA49214231C466C /* LocationSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSearchService.swift; sourceTree = "<group>"; };
+		1CACD79F96A4228E6E54DF8D /* RoutePlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePlannerView.swift; sourceTree = "<group>"; };
+		1E0552CE3276F9FDCD1733D3 /* NovoterraApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NovoterraApp.swift; sourceTree = "<group>"; };
+		1F849AC521C4AFC6A8A10C70 /* RoutePlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePlanner.swift; sourceTree = "<group>"; };
+		23342410998A3BDA1290C8AB /* RouteCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCardView.swift; sourceTree = "<group>"; };
+		24B24188D68EB56C520D8E26 /* NavigationHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationHandoff.swift; sourceTree = "<group>"; };
+		2C96BAB58AEF8AAB95E5008B /* Novoterra.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Novoterra.entitlements; sourceTree = "<group>"; };
+		443AB7552FD35AB13DCA1D71 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		59773E339F96CAB2E26D4CA8 /* NovoTerra.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NovoTerra.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6152C07E64D53ADF82F7F359 /* iCloudFileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iCloudFileManager.swift; sourceTree = "<group>"; };
+		71564605DDF677728942F65A /* FOWParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FOWParser.swift; sourceTree = "<group>"; };
+		91A87422141D2478876771EC /* FOWSpatialIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FOWSpatialIndex.swift; sourceTree = "<group>"; };
+		929715637283B5EF9D7A3FEE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AB6003CE0DE3F38AD5037DCC /* FOWDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FOWDataManager.swift; sourceTree = "<group>"; };
+		B6A28595245689241122D43E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		C7415B1E2F0BAC41001B82FE /* LocalFileCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFileCache.swift; sourceTree = "<group>"; };
+		C7415B202F0BCDD2001B82FE /* SearchHistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryManager.swift; sourceTree = "<group>"; };
+		C7415B292F0C918C001B82FE /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		C7415B2B2F0C986C001B82FE /* RouteOptionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteOptionCard.swift; sourceTree = "<group>"; };
+		C7415B2D2F0CAB51001B82FE /* RouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapView.swift; sourceTree = "<group>"; };
+		DE286C8F3E017F2EA01CDAC5 /* MercatorProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MercatorProjection.swift; sourceTree = "<group>"; };
+		E432EC054A5DA21A73366E2E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9B84DABFA0A602D38C31F535 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6969A764A6746601A9DC3E26 /* SWCompression in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		21DEFE7BA94AE613EDB0B5CF = {
+			isa = PBXGroup;
+			children = (
+				25C492125D768DD7351CA49C /* Novoterra */,
+				6C843E0F9365883F6D7FCD78 /* NovoterraTests */,
+				8A6EC0901472EEE763772651 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		25C492125D768DD7351CA49C /* Novoterra */ = {
+			isa = PBXGroup;
+			children = (
+				E432EC054A5DA21A73366E2E /* Assets.xcassets */,
+				443AB7552FD35AB13DCA1D71 /* Info.plist */,
+				2C96BAB58AEF8AAB95E5008B /* Novoterra.entitlements */,
+				F1BB1F5CF76BDBC20358C870 /* App */,
+				BE4604C2E7401C7ACE7DCB21 /* Models */,
+				6AC68E5E8A6BEABB6D45C37C /* Services */,
+				F91A70832C65BF061137F4F5 /* Views */,
+				C7415B272F0BD093001B82FE /* Utils */,
+				C7415B292F0C918C001B82FE /* AppIcon.icon */,
+			);
+			path = Novoterra;
+			sourceTree = "<group>";
+		};
+		6AC68E5E8A6BEABB6D45C37C /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				C7415B1E2F0BAC41001B82FE /* LocalFileCache.swift */,
+				AB6003CE0DE3F38AD5037DCC /* FOWDataManager.swift */,
+				71564605DDF677728942F65A /* FOWParser.swift */,
+				91A87422141D2478876771EC /* FOWSpatialIndex.swift */,
+				6152C07E64D53ADF82F7F359 /* iCloudFileManager.swift */,
+				1548A6A70AA49214231C466C /* LocationSearchService.swift */,
+				DE286C8F3E017F2EA01CDAC5 /* MercatorProjection.swift */,
+				24B24188D68EB56C520D8E26 /* NavigationHandoff.swift */,
+				1F849AC521C4AFC6A8A10C70 /* RoutePlanner.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		6C843E0F9365883F6D7FCD78 /* NovoterraTests */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = NovoterraTests;
+			sourceTree = "<group>";
+		};
+		8A6EC0901472EEE763772651 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				59773E339F96CAB2E26D4CA8 /* NovoTerra.app */,
+				004AC8752448474217887E1D /* NovoTerraTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BE4604C2E7401C7ACE7DCB21 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				C7415B202F0BCDD2001B82FE /* SearchHistoryManager.swift */,
+				13EB6ABC28457DE28F6868F8 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		C7415B272F0BD093001B82FE /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		F1BB1F5CF76BDBC20358C870 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				1E0552CE3276F9FDCD1733D3 /* NovoterraApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F91A70832C65BF061137F4F5 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				C7415B2D2F0CAB51001B82FE /* RouteMapView.swift */,
+				C7415B2B2F0C986C001B82FE /* RouteOptionCard.swift */,
+				929715637283B5EF9D7A3FEE /* ContentView.swift */,
+				23342410998A3BDA1290C8AB /* RouteCardView.swift */,
+				1CACD79F96A4228E6E54DF8D /* RoutePlannerView.swift */,
+				B6A28595245689241122D43E /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0C5B14A4C319A8727CADACC2 /* NovoTerra */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 87AA495DA1BE92DCDC172180 /* Build configuration list for PBXNativeTarget "NovoTerra" */;
+			buildPhases = (
+				99EAD3121C76DDCF2572F2D2 /* Sources */,
+				B383160567DFEC6E2BF12936 /* Resources */,
+				9B84DABFA0A602D38C31F535 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NovoTerra;
+			packageProductDependencies = (
+				9CA7F121DA6EE0FE3A2C8A3B /* SWCompression */,
+			);
+			productName = Novoterra;
+			productReference = 59773E339F96CAB2E26D4CA8 /* NovoTerra.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3E87DF1E467C2EC8A68761EE /* NovoTerraTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4355EF3EAC134DF4A043700 /* Build configuration list for PBXNativeTarget "NovoTerraTests" */;
+			buildPhases = (
+				A49BF5E601AEB309862736DB /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6C211A177403987038C574AC /* PBXTargetDependency */,
+			);
+			name = NovoTerraTests;
+			packageProductDependencies = (
+			);
+			productName = NovoterraTests;
+			productReference = 004AC8752448474217887E1D /* NovoTerraTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E0DAD250887951274C734BCE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2620;
+			};
+			buildConfigurationList = CE9A3E30C2B5717E19A49B1F /* Build configuration list for PBXProject "NovoTerra" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 21DEFE7BA94AE613EDB0B5CF;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CD2E110F881BD0F4A41FE9CA /* XCRemoteSwiftPackageReference "SWCompression" */,
+			);
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0C5B14A4C319A8727CADACC2 /* NovoTerra */,
+				3E87DF1E467C2EC8A68761EE /* NovoTerraTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B383160567DFEC6E2BF12936 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8296D43752636DA2F2FDCB5F /* Assets.xcassets in Resources */,
+				C7415B2A2F0C918C001B82FE /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		99EAD3121C76DDCF2572F2D2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C7415B2C2F0C986C001B82FE /* RouteOptionCard.swift in Sources */,
+				1EEBFCFAFE5E2B5C31BE9F03 /* ContentView.swift in Sources */,
+				3979184C4F37EEFDD1367957 /* FOWDataManager.swift in Sources */,
+				6162D0AC32E13A7EBAE5E302 /* FOWParser.swift in Sources */,
+				DB00E51CDF9BC79F20E96D41 /* FOWSpatialIndex.swift in Sources */,
+				F60C58082F2DAA7828FA9BD2 /* LocationSearchService.swift in Sources */,
+				EA49113E2A498C19B8B6E4A1 /* MercatorProjection.swift in Sources */,
+				333A6A355A2923D4010DE74A /* Models.swift in Sources */,
+				B9F6CA5F9DD382728D3DA430 /* NavigationHandoff.swift in Sources */,
+				C7415B212F0BCDD2001B82FE /* SearchHistoryManager.swift in Sources */,
+				3B5126F012CC1CCBA8F15C01 /* NovoterraApp.swift in Sources */,
+				8A1F9D89668278C2ACA9E05E /* RouteCardView.swift in Sources */,
+				CA0EADF972724E574A3EE260 /* RoutePlanner.swift in Sources */,
+				1FA339C05043FBF29D6185EF /* RoutePlannerView.swift in Sources */,
+				B26A0CC578CC67D8CE9032EC /* SettingsView.swift in Sources */,
+				C7415B2E2F0CAB51001B82FE /* RouteMapView.swift in Sources */,
+				C7415B1F2F0BAC41001B82FE /* LocalFileCache.swift in Sources */,
+				0C97EF13AF3166E356572769 /* iCloudFileManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A49BF5E601AEB309862736DB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6C211A177403987038C574AC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0C5B14A4C319A8727CADACC2 /* NovoTerra */;
+			targetProxy = A7621AB0EF8A2BB55F125B25 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		2467CB4196940885099F100A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.novoterra.NovoterraTests;
+				PRODUCT_NAME = NovoTerraTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NovoTerra.app/NovoTerra";
+			};
+			name = Debug;
+		};
+		2519101FA0507EE39D12445D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Novoterra/Novoterra.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = AUF37YGA3G;
+				INFOPLIST_FILE = Novoterra/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NovoTerra;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.novoterra.app;
+				PRODUCT_NAME = NovoTerra;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		41E8E202CB4339CB89804E59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Novoterra/Novoterra.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = AUF37YGA3G;
+				INFOPLIST_FILE = Novoterra/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NovoTerra;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.novoterra.app;
+				PRODUCT_NAME = NovoTerra;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		47F27B8A5A01A475C2F58C6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		616EC9A952EF3FB1A5596048 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D922A4D221983115CF0FA1B8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.novoterra.NovoterraTests;
+				PRODUCT_NAME = NovoTerraTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NovoTerra.app/NovoTerra";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		87AA495DA1BE92DCDC172180 /* Build configuration list for PBXNativeTarget "NovoTerra" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				41E8E202CB4339CB89804E59 /* Debug */,
+				2519101FA0507EE39D12445D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CE9A3E30C2B5717E19A49B1F /* Build configuration list for PBXProject "NovoTerra" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				47F27B8A5A01A475C2F58C6D /* Debug */,
+				616EC9A952EF3FB1A5596048 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F4355EF3EAC134DF4A043700 /* Build configuration list for PBXNativeTarget "NovoTerraTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2467CB4196940885099F100A /* Debug */,
+				D922A4D221983115CF0FA1B8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CD2E110F881BD0F4A41FE9CA /* XCRemoteSwiftPackageReference "SWCompression" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tsolomko/SWCompression.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9CA7F121DA6EE0FE3A2C8A3B /* SWCompression */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CD2E110F881BD0F4A41FE9CA /* XCRemoteSwiftPackageReference "SWCompression" */;
+			productName = SWCompression;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = E0DAD250887951274C734BCE /* Project object */;
+}

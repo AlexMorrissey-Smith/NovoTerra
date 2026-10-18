@@ -1,164 +1,149 @@
 import Foundation
 import CoreLocation
+import os
 
-/// Memory-optimized spatial index for FOW data
-/// Stores ONLY tile metadata, loads bitmaps on-demand to avoid RAM explosion
+/// Memory-bounded spatial index over Fog of World tiles.
+/// Holds only the tile file list; decompressed tiles are loaded on demand into a byte-budgeted LRU cache.
 actor FOWSpatialIndex {
-    
+
+    private static let log = Logger(subsystem: "com.novoterra.app", category: "FOWSpatialIndex")
+
     // MARK: - Storage
-    
-    /// Sparse storage: only tracks WHICH blocks exist, not their bitmap data
-    private var tileMetadata: [TileKey: FOWTileMetadata] = [:]
-    
-    /// Cache of recently accessed decompressed tile data
-    /// Uses LRU eviction to keep memory bounded
-    private var tileCache: [TileKey: Data] = [:]
-    private var cacheOrder: [TileKey] = []
-    private let maxCacheSize = 8  // Balance between memory usage and route calculation reliability
-    
+
+    private var tiles: [Int: FOWTileMetadata] = [:]
+
+    private var cache: [Int: FOWTile] = [:]
+    private var cacheOrder: [Int] = []
+    private var cacheBytes = 0
+    private let maxCacheBytes: Int
+    /// Tiles that failed to decode; skipped until the index is replaced.
+    private var failedTiles: Set<Int> = []
+
+    init(maxCacheBytes: Int = 96 * 1024 * 1024) {
+        self.maxCacheBytes = maxCacheBytes
+    }
+
     // MARK: - Registration
-    
-    /// Register a tile's metadata without loading bitmap data
-    func registerTile(_ metadata: FOWTileMetadata) {
-        tileMetadata[metadata.tileKey] = metadata
+
+    /// Replace the whole index. Drops cached tile data because files may have changed.
+    func replaceTiles(_ newTiles: [FOWTileMetadata]) {
+        tiles = Dictionary(newTiles.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+        clearCache()
+        failedTiles.removeAll()
     }
-    
-    /// Get count of registered tiles
-    var tileCount: Int {
-        tileMetadata.count
-    }
-    
-    /// Get all registered tile metadata
-    func getAllTileMetadata() -> [FOWTileMetadata] {
-        Array(tileMetadata.values)
-    }
-    
-    /// Get block data for fog rendering (uses LRU cache)
-    func getBlock(for tile: FOWTileMetadata, blockX: Int, blockY: Int) async -> FOWBlock? {
+
+    var tileCount: Int { tiles.count }
+
+    func hasTile(id: Int) -> Bool { tiles[id] != nil }
+
+    // MARK: - Tile Access
+
+    /// Decoded tile for the given ID, or nil if the user has never visited it.
+    func tile(id: Int) -> FOWTile? {
+        if let cached = cache[id] {
+            touch(id)
+            return cached
+        }
+        guard let metadata = tiles[id], !failedTiles.contains(id) else { return nil }
+
         do {
-            let tileData = try await loadTileData(for: tile)
-            return FOWParser.loadBlock(from: tileData, blockX: blockX, blockY: blockY)
+            let tile = try FOWParser.decodeTile(Data(contentsOf: metadata.fileURL, options: .mappedIfSafe))
+            insert(tile, for: id)
+            return tile
         } catch {
-            print("Error loading block: \(error)")
+            failedTiles.insert(id)
+            Self.log.error("Failed to load tile \(id): \(error.localizedDescription)")
             return nil
         }
     }
-    
-    // MARK: - Coordinate Checking
-    
-    /// Check if a coordinate has been visited
-    /// JIT loads bitmap data only when needed
-    func isCoordinateVisited(_ coord: CLLocationCoordinate2D) async -> Bool {
-        let components = MercatorProjection.coordinateToComponents(coord)
-        
-        // Check if tile exists
-        guard let metadata = tileMetadata[components.tileKey] else {
-            return false
-        }
-        
-        // Check if block exists in this tile
-        guard metadata.existingBlockKeys.contains(components.blockKey) else {
-            return false
-        }
-        
-        // JIT load the tile data and check specific pixel
-        do {
-            let tileData = try await loadTileData(for: metadata)
-            
-            guard let block = FOWParser.loadBlock(
-                from: tileData,
-                blockX: components.blockX,
-                blockY: components.blockY
-            ) else {
-                return false
-            }
-            
-            return block.isVisited(pixelX: components.pixelX, pixelY: components.pixelY)
-        } catch {
-            print("Error loading tile data: \(error)")
-            return false
-        }
-    }
-    
-    /// Calculate percentage of a polyline that passes through visited areas
-    /// Samples at regular intervals for performance
-    func visitedPercentageAlongPath(_ coordinates: [CLLocationCoordinate2D]) async -> Double {
-        guard !coordinates.isEmpty else { return 0 }
-        
-        var visitedCount = 0
-        
-        for coord in coordinates {
-            if await isCoordinateVisited(coord) {
-                visitedCount += 1
-            }
-        }
-        
-        return Double(visitedCount) / Double(coordinates.count)
-    }
-    
-    // MARK: - Private Helpers
-    
-    /// Load tile data with caching
-    /// NOTE: This requires the parent folder's security scope to still be active.
-    /// The stored file URLs don't have their own security scope - they inherited from parent.
-    /// TODO: Need to either keep parent scope active, or store per-file bookmarks.
-    private func loadTileData(for metadata: FOWTileMetadata) async throws -> Data {
-        // Check cache first
-        if let cached = tileCache[metadata.tileKey] {
-            // Move to end of LRU order
-            cacheOrder.removeAll { $0 == metadata.tileKey }
-            cacheOrder.append(metadata.tileKey)
-            return cached
-        }
-        
-        // Load from disk
-        // Note: The parent folder's security scope must still be active for this to work.
-        // Calling startAccessingSecurityScopedResource() on child URLs fails because
-        // they weren't directly user-selected via document picker.
-        let url = metadata.fileURL
 
-        // Memory-mapped read
-        let compressedData = try Data(contentsOf: url)
-        
-        // Decompress
-        let decompressedData = try FOWParser.decompressTile(compressedData)
-        
-        // Add to cache
-        tileCache[metadata.tileKey] = decompressedData
-        cacheOrder.append(metadata.tileKey)
-        
-        // Evict oldest if over limit
-        while cacheOrder.count > maxCacheSize {
+    // MARK: - Visited Checks
+
+    /// Whether any FOW pixel within `radiusPixels` of the global pixel is visited.
+    private func isVisitedNear(gx: Int, gy: Int, radiusPixels r: Int) -> Bool {
+        let r2 = r * r
+        var lastTileID = -1
+        var lastTile: FOWTile?
+        for dy in -r...r {
+            for dx in -r...r where dx * dx + dy * dy <= r2 {
+                let x = gx + dx, y = gy + dy
+                guard x >= 0, y >= 0, x < MercatorProjection.WORLD_PIXELS, y < MercatorProjection.WORLD_PIXELS else { continue }
+                let c = MercatorProjection.globalPixelToComponents(x, y)
+                let id = c.tileID
+                if id != lastTileID {
+                    lastTileID = id
+                    lastTile = tiles[id] == nil ? nil : tile(id: id)
+                }
+                if let lastTile, lastTile.isVisited(blockX: c.blockX, blockY: c.blockY, pixelX: c.pixelX, pixelY: c.pixelY) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    /// For each coordinate, whether the user has been within `toleranceMeters` of it.
+    /// The tolerance absorbs GPS noise and the offset between recorded tracks and map road geometry.
+    func visitedMask(for coordinates: [CLLocationCoordinate2D], toleranceMeters: Double) -> [Bool] {
+        guard !tiles.isEmpty else { return Array(repeating: false, count: coordinates.count) }
+        return coordinates.map { coord in
+            let (gx, gy) = MercatorProjection.lngLatToGlobalPixel(lng: coord.longitude, lat: coord.latitude)
+            let r = Self.radiusPixels(toleranceMeters, latitude: coord.latitude)
+            return isVisitedNear(gx: gx, gy: gy, radiusPixels: r)
+        }
+    }
+
+    /// Fraction of a square area around `center` that is unexplored, from a coarse sample grid.
+    /// Used to rank candidate detour waypoints.
+    func unexploredFraction(around center: CLLocationCoordinate2D, radiusMeters: Double, gridSize: Int = 7) -> Double {
+        guard !tiles.isEmpty else { return 1 }
+        let (cx, cy) = MercatorProjection.lngLatToGlobalPixel(lng: center.longitude, lat: center.latitude)
+        let metersPerPixel = MercatorProjection.metersPerPixel(atLatitude: center.latitude)
+        let radiusPx = radiusMeters / metersPerPixel
+        let step = gridSize > 1 ? (2 * radiusPx) / Double(gridSize - 1) : 0
+        let tolerance = Self.radiusPixels(25, latitude: center.latitude)
+
+        var unexplored = 0
+        for j in 0..<gridSize {
+            for i in 0..<gridSize {
+                let gx = cx + Int(-radiusPx + Double(i) * step)
+                let gy = cy + Int(-radiusPx + Double(j) * step)
+                if !isVisitedNear(gx: gx, gy: gy, radiusPixels: tolerance) {
+                    unexplored += 1
+                }
+            }
+        }
+        return Double(unexplored) / Double(gridSize * gridSize)
+    }
+
+    private static func radiusPixels(_ meters: Double, latitude: Double) -> Int {
+        max(0, Int((meters / MercatorProjection.metersPerPixel(atLatitude: latitude)).rounded()))
+    }
+
+    // MARK: - Cache
+
+    private func touch(_ id: Int) {
+        if let index = cacheOrder.firstIndex(of: id) {
+            cacheOrder.remove(at: index)
+        }
+        cacheOrder.append(id)
+    }
+
+    private func insert(_ tile: FOWTile, for id: Int) {
+        cache[id] = tile
+        cacheBytes += tile.byteCount
+        cacheOrder.append(id)
+        while cacheBytes > maxCacheBytes, cacheOrder.count > 1 {
             let oldest = cacheOrder.removeFirst()
-            tileCache.removeValue(forKey: oldest)
+            if let evicted = cache.removeValue(forKey: oldest) {
+                cacheBytes -= evicted.byteCount
+            }
         }
-        
-        return decompressedData
     }
-    
-    /// Clear all cached data
+
     func clearCache() {
-        let clearedCount = tileCache.count
-        tileCache.removeAll()
+        cache.removeAll()
         cacheOrder.removeAll()
-        if clearedCount > 0 {
-            print("FOWSpatialIndex: Cleared \(clearedCount) cached tiles to free memory")
-        }
-    }
-}
-
-// MARK: - Errors
-
-enum SpatialIndexError: Error, LocalizedError {
-    case securityScopeDenied
-    case tileNotFound
-    
-    var errorDescription: String? {
-        switch self {
-        case .securityScopeDenied:
-            return "Security scope access denied for file"
-        case .tileNotFound:
-            return "Tile not found in index"
-        }
+        cacheBytes = 0
     }
 }

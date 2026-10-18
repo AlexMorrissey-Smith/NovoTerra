@@ -1,13 +1,12 @@
 import Foundation
 import Compression
 
-/// Parses Fog of World sync data files
-/// IMPORTANT: All decompression and parsing MUST run on background thread
-actor FOWParser {
-    
+/// Parses Fog of World sync data files.
+/// Format reference: fog-machine (https://github.com/CaviarChen/fog-machine).
+enum FOWParser {
+
     // MARK: - Constants (from fog-machine analysis)
     static let FILENAME_MASK1 = "olhwjsktri"
-    static let FILENAME_MASK2 = "eizxdwknmo"
     static let MAP_WIDTH = 512
     static let TILE_WIDTH = 128
     static let BITMAP_WIDTH = 64
@@ -15,8 +14,9 @@ actor FOWParser {
     static let BLOCK_BITMAP_SIZE = 512
     static let BLOCK_EXTRA_DATA = 3
     static let BLOCK_SIZE = 515
-    
-    // Build filename encoding lookup
+    /// Largest possible decompressed tile: full header plus every block present.
+    static let MAX_TILE_SIZE = TILE_HEADER_SIZE + TILE_WIDTH * TILE_WIDTH * BLOCK_SIZE
+
     private static let filenameEncoding: [Character: Int] = {
         var encoding: [Character: Int] = [:]
         for (i, char) in FILENAME_MASK1.enumerated() {
@@ -24,184 +24,84 @@ actor FOWParser {
         }
         return encoding
     }()
-    
+
     // MARK: - Filename Decoding
-    
+
+    /// Whether a filename looks like a FOW tile file: [4-char hash][masked digits][2-char suffix].
+    static func isTileFilename(_ filename: String) -> Bool {
+        (try? decodeFilename(filename)) != nil
+    }
+
     /// Extract tile ID from masked filename
-    /// Filename format: [4-char MD5][masked digits][2-char suffix]
     static func decodeFilename(_ filename: String) throws -> Int {
-        // Skip first 4 chars (MD5 hash) and last 2 chars (suffix)
-        let maskedPart = String(filename.dropFirst(4).dropLast(2))
-        
-        var digits: [Int] = []
+        guard filename.count >= 7, !filename.contains(".") else {
+            throw FOWParserError.invalidFilename(filename)
+        }
+        let maskedPart = filename.dropFirst(4).dropLast(2)
+
+        var id = 0
         for char in maskedPart {
             guard let digit = filenameEncoding[char] else {
                 throw FOWParserError.invalidFilename(filename)
             }
-            digits.append(digit)
+            id = id * 10 + digit
         }
-        
-        guard let id = Int(digits.map { String($0) }.joined()) else {
+
+        guard id < MAP_WIDTH * MAP_WIDTH else {
             throw FOWParserError.invalidFilename(filename)
         }
-        
         return id
     }
-    
+
     /// Get tile x,y coordinates from ID
     static func tileCoordinates(from id: Int) -> (x: Int, y: Int) {
-        let x = id % MAP_WIDTH
-        let y = id / MAP_WIDTH
-        return (x, y)
+        (id % MAP_WIDTH, id / MAP_WIDTH)
     }
-    
+
     // MARK: - Decompression
-    
-    /// Decompress zlib/DEFLATE data
-    /// FOW files use ZLIB format (78 xx header + raw DEFLATE + Adler-32 checksum)
-    /// Apple's COMPRESSION_ZLIB expects raw DEFLATE, so we strip the wrapper
-    static func decompressTile(_ compressedData: Data) throws -> Data {
-        // Use Apple's low-level Compression framework
-        // Dynamic buffer sizing: estimate 10x compression ratio, min 256KB, cap at 5MB
-        // Falls back to larger buffer if initial attempt fails
-        let estimatedSize = max(256 * 1024, min(5 * 1024 * 1024, compressedData.count * 10))
-        
-        // Try with estimated size first
-        if let result = try? decompressWithBufferSize(compressedData, bufferSize: estimatedSize) {
-            return result
-        }
-        
-        // Fallback to larger buffer (10MB) if estimated size was too small
-        let fallbackSize = 10 * 1024 * 1024
-        return try decompressWithBufferSize(compressedData, bufferSize: fallbackSize)
-    }
-    
-    private static func decompressWithBufferSize(_ compressedData: Data, bufferSize: Int) throws -> Data {
-        let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-        defer { destinationBuffer.deallocate() }
-        let destinationSize = bufferSize
-        
-        // Check for ZLIB header (78 xx) and strip wrapper if present
-        // ZLIB format: 2-byte header + raw DEFLATE + 4-byte Adler-32 checksum
-        var dataToDecompress = compressedData
-        let isZlibWrapped = compressedData.count > 6 && 
-                            compressedData[0] == 0x78 && 
-                            (compressedData[1] == 0x01 || // No compression
-                             compressedData[1] == 0x5E || // Fast compression
-                             compressedData[1] == 0x9C || // Default compression  
-                             compressedData[1] == 0xDA)   // Best compression
-        
-        if isZlibWrapped {
-            // Strip 2-byte ZLIB header and 4-byte Adler-32 checksum
-            dataToDecompress = compressedData.dropFirst(2).dropLast(4)
-        }
-        
-        return try dataToDecompress.withUnsafeBytes { sourceBuffer in
-            guard let sourcePointer = sourceBuffer.baseAddress?.bindMemory(to: UInt8.self, capacity: sourceBuffer.count) else {
-                throw FOWParserError.invalidTileData
-            }
-            
-            // Decompress raw DEFLATE data
-            let decompressedSize = compression_decode_buffer(
-                destinationBuffer,
-                destinationSize,
-                sourcePointer,
-                sourceBuffer.count,
-                nil,
-                COMPRESSION_ZLIB
-            )
-            
-            if decompressedSize > 0 {
-                return Data(bytes: destinationBuffer, count: decompressedSize)
-            }
-            
-            // If stripping wrapper failed, try with original data as fallback
-            if isZlibWrapped {
-                let fallbackResult = compressedData.withUnsafeBytes { fallbackBuffer -> Data? in
-                    guard let fallbackPointer = fallbackBuffer.baseAddress?.bindMemory(to: UInt8.self, capacity: fallbackBuffer.count) else {
-                        return nil
-                    }
-                    
-                    let fallbackSize = compression_decode_buffer(
-                        destinationBuffer,
-                        destinationSize,
-                        fallbackPointer,
-                        fallbackBuffer.count,
-                        nil,
-                        COMPRESSION_ZLIB
-                    )
-                    
-                    if fallbackSize > 0 {
-                        return Data(bytes: destinationBuffer, count: fallbackSize)
-                    }
-                    return nil
-                }
-                
-                if let result = fallbackResult {
-                    return result
-                }
-            }
-            
-            print("Decompression failed. First 16 bytes: \(compressedData.prefix(16).map { String(format: "%02hhx", $0) }.joined(separator: " "))")
-            throw FOWParserError.decompressionFailed
-        }
-    }
-        
 
+    /// Decompress a tile file and validate its layout.
+    /// FOW files use the zlib container (2-byte header + raw DEFLATE + Adler-32).
+    /// Apple's COMPRESSION_ZLIB decodes raw DEFLATE, so the wrapper is stripped first.
+    static func decodeTile(_ compressedData: Data) throws -> FOWTile {
+        let data = try decompress(compressedData)
+        guard data.count >= TILE_HEADER_SIZE else {
+            throw FOWParserError.invalidTileData
+        }
+        return FOWTile(data: data)
+    }
 
-    
-    // MARK: - Header Parsing (Metadata Only)
-    
-    /// Parse tile header to extract which blocks exist
-    /// Does NOT load bitmap data - that's loaded JIT
-    static func parseHeader(_ decompressedData: Data) -> Set<BlockKey> {
-        var existingBlocks = Set<BlockKey>()
-        
-        let header = decompressedData.prefix(Self.TILE_HEADER_SIZE)
-        
-        header.withUnsafeBytes { buffer in
-            // Ensure we have enough data and it's aligned properly
-            guard buffer.count >= Self.TILE_HEADER_SIZE else { return }
-            
-            let uint16Buffer = buffer.bindMemory(to: UInt16.self)
-            let limit = min(uint16Buffer.count, Self.TILE_WIDTH * Self.TILE_WIDTH)
-            
-            for i in 0..<limit {
-                let blockIdx = UInt16(littleEndian: uint16Buffer[i])
-                if blockIdx > 0 {
-                    let blockX = i % Self.TILE_WIDTH
-                    let blockY = i / Self.TILE_WIDTH
-                    existingBlocks.insert("\(blockX)-\(blockY)")
-                }
+    static func decompress(_ compressedData: Data) throws -> Data {
+        var payload = compressedData
+        if compressedData.count > 6,
+           compressedData[compressedData.startIndex] & 0x0F == 0x08,  // CM = deflate
+           (UInt16(compressedData[compressedData.startIndex]) << 8 | UInt16(compressedData[compressedData.startIndex + 1])) % 31 == 0 {
+            payload = compressedData.dropFirst(2).dropLast(4)
+        }
+
+        // Start from a typical ratio and grow until the output no longer fills the buffer.
+        var capacity = min(MAX_TILE_SIZE, max(256 * 1024, payload.count * 16))
+        while true {
+            let result = try decode(payload, capacity: capacity)
+            if result.count < capacity || capacity >= MAX_TILE_SIZE {
+                return result
+            }
+            capacity = min(MAX_TILE_SIZE, capacity * 2)
+        }
+    }
+
+    private static func decode(_ payload: Data, capacity: Int) throws -> Data {
+        var output = Data(count: capacity)
+        let written = output.withUnsafeMutableBytes { dst in
+            payload.withUnsafeBytes { src -> Int in
+                guard let srcBase = src.bindMemory(to: UInt8.self).baseAddress,
+                      let dstBase = dst.bindMemory(to: UInt8.self).baseAddress else { return 0 }
+                return compression_decode_buffer(dstBase, capacity, srcBase, src.count, nil, COMPRESSION_ZLIB)
             }
         }
-        
-        return existingBlocks
-    }
-    
-    // MARK: - Block Loading (JIT)
-    
-    /// Load a specific block's bitmap data from decompressed tile
-    static func loadBlock(from decompressedData: Data, blockX: Int, blockY: Int) -> FOWBlock? {
-        let headerIndex = blockX + blockY * Self.TILE_WIDTH
-        
-        // Read block index from header
-        let blockIdx: UInt16 = decompressedData.withUnsafeBytes { buffer in
-            let uint16Buffer = buffer.bindMemory(to: UInt16.self)
-            return UInt16(littleEndian: uint16Buffer[headerIndex])
-        }
-        
-        guard blockIdx > 0 else { return nil }
-        
-        // Calculate offset in data
-        let startOffset = Self.TILE_HEADER_SIZE + Int(blockIdx - 1) * Self.BLOCK_SIZE
-        let endOffset = startOffset + Self.BLOCK_BITMAP_SIZE
-        
-        guard endOffset <= decompressedData.count else { return nil }
-        
-        let bitmapData = decompressedData[startOffset..<endOffset]
-        
-        return FOWBlock(x: blockX, y: blockY, bitmap: Data(bitmapData))
+        guard written > 0 else { throw FOWParserError.decompressionFailed }
+        output.count = written
+        return output
     }
 }
 
@@ -211,7 +111,7 @@ enum FOWParserError: Error, LocalizedError {
     case invalidFilename(String)
     case decompressionFailed
     case invalidTileData
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidFilename(let name):

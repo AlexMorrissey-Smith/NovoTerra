@@ -2,95 +2,87 @@ import Foundation
 import MapKit
 import UIKit
 
-/// Handles navigation handoff to external apps
-struct NavigationHandoff {
-    
-    /// Opens the selected navigation app with the route
-    static func openRoute(
+/// Hands a planned route off to an external navigation app.
+@MainActor
+enum NavigationHandoff {
+
+    /// Opens the selected navigation app with the route's waypoints as intermediate stops.
+    /// - Parameter origin: nil means "start from the user's current location".
+    static func open(
+        _ option: RouteOption,
         in app: NavigationApp,
-        waypoints: [CLLocationCoordinate2D],
-        waypointNames: [String?],
-        origin: CLLocationCoordinate2D,
-        destination: CLLocationCoordinate2D
+        origin: CLLocationCoordinate2D?,
+        destination: CLLocationCoordinate2D,
+        destinationName: String,
+        mode: TravelMode
     ) {
-        // Limit waypoints to app's maximum
-        let limitedWaypoints = Array(waypoints.prefix(app.maxWaypoints))
-        let limitedNames = Array(waypointNames.prefix(app.maxWaypoints))
-        
+        let waypoints = option.handoffWaypoints(maxCount: app.maxWaypoints, spacingMeters: mode.waypointSpacingMeters)
+
         switch app {
         case .appleMaps:
-            openAppleMaps(waypoints: limitedWaypoints, waypointNames: limitedNames, destination: destination)
+            openAppleMaps(origin: origin, waypoints: waypoints, destination: destination, destinationName: destinationName, mode: mode)
         case .googleMaps:
-            openGoogleMaps(waypoints: limitedWaypoints, origin: origin, destination: destination)
+            openGoogleMaps(origin: origin, waypoints: waypoints, destination: destination, mode: mode)
         }
     }
-    
-    // MARK: - Apple Maps (Official API)
-    
+
+    // MARK: - Apple Maps
+
     private static func openAppleMaps(
+        origin: CLLocationCoordinate2D?,
         waypoints: [CLLocationCoordinate2D],
-        waypointNames: [String?],
-        destination: CLLocationCoordinate2D
+        destination: CLLocationCoordinate2D,
+        destinationName: String,
+        mode: TravelMode
     ) {
-        // Convert coordinates to MKMapItems
-        // NOTE: Reverse geocoding is ASYNC - names must be pre-fetched while user views RouteCard
-        // If not ready, fall back to "Checkpoint X" (reliable and fast)
-        var mapItems: [MKMapItem] = waypoints.enumerated().map { index, coord in
-            let placemark = MKPlacemark(coordinate: coord)
-            let item = MKMapItem(placemark: placemark)
-            item.name = waypointNames[safe: index] ?? "Checkpoint \(index + 1)"
+        // The first item is the start, the last is the destination, and anything between is a stop.
+        let start: MKMapItem = origin.map { MKMapItem(placemark: MKPlacemark(coordinate: $0)) } ?? .forCurrentLocation()
+        if origin != nil { start.name = "Start" }
+
+        let stops = waypoints.enumerated().map { index, coord in
+            let item = MKMapItem(placemark: MKPlacemark(coordinate: coord))
+            item.name = "Via \(index + 1)"
             return item
         }
-        
-        // Add final destination
-        let destPlacemark = MKPlacemark(coordinate: destination)
-        let destItem = MKMapItem(placemark: destPlacemark)
-        destItem.name = "Destination"
-        mapItems.append(destItem)
-        
-        // Launch options
-        let launchOptions: [String: Any] = [
-            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
-        ]
-        
-        // Open Apple Maps with multi-stop route
-        MKMapItem.openMaps(with: mapItems, launchOptions: launchOptions)
+
+        let end = MKMapItem(placemark: MKPlacemark(coordinate: destination))
+        end.name = destinationName
+
+        MKMapItem.openMaps(
+            with: [start] + stops + [end],
+            launchOptions: [MKLaunchOptionsDirectionsModeKey: mode.appleMapsMode]
+        )
     }
-    
+
     // MARK: - Google Maps (Universal Link)
-    
+
     private static func openGoogleMaps(
+        origin: CLLocationCoordinate2D?,
         waypoints: [CLLocationCoordinate2D],
-        origin: CLLocationCoordinate2D,
-        destination: CLLocationCoordinate2D
+        destination: CLLocationCoordinate2D,
+        mode: TravelMode
     ) {
-        // Use URLComponents for clean, safe URL construction
         // Docs: https://developers.google.com/maps/documentation/urls/get-started
         var components = URLComponents(string: "https://www.google.com/maps/dir/")!
-        
-        let waypointString = waypoints
-            .map { "\($0.latitude),\($0.longitude)" }
-            .joined(separator: "|")
-        
-        components.queryItems = [
+        var items = [
             URLQueryItem(name: "api", value: "1"),
-            URLQueryItem(name: "origin", value: "\(origin.latitude),\(origin.longitude)"),
-            URLQueryItem(name: "destination", value: "\(destination.latitude),\(destination.longitude)"),
-            URLQueryItem(name: "waypoints", value: waypointString),
-            URLQueryItem(name: "travelmode", value: "driving")
+            URLQueryItem(name: "destination", value: format(destination)),
+            URLQueryItem(name: "travelmode", value: mode.googleMapsMode),
         ]
-        
+        // Omitting origin makes Google Maps start from the current location.
+        if let origin {
+            items.append(URLQueryItem(name: "origin", value: format(origin)))
+        }
+        if !waypoints.isEmpty {
+            items.append(URLQueryItem(name: "waypoints", value: waypoints.map(format).joined(separator: "|")))
+        }
+        components.queryItems = items
+
         guard let url = components.url else { return }
-        
-        // Universal Link handles app-or-web decision automatically
         UIApplication.shared.open(url)
     }
-}
 
-// MARK: - Safe Array Access Extension
-
-extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
+    private static func format(_ coord: CLLocationCoordinate2D) -> String {
+        String(format: "%.6f,%.6f", coord.latitude, coord.longitude)
     }
 }

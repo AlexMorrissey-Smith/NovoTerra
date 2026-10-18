@@ -1,3 +1,5 @@
+> **Note:** This is the original design plan. Parts of it are out of date; see README.md for how the app works now.
+
 # Novoterra: Fog of World Route Avoidance iOS App
 
 An iOS app that reads Fog of World sync data from iCloud Drive and provides intelligent routing that avoids already-traveled areas, with multiple avoidance intensity levels. **Hands off navigation to Apple Maps or Google Maps.**

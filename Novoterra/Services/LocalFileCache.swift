@@ -1,4 +1,13 @@
 import Foundation
+import os
+
+/// Result of copying the FOW sync folder into the local cache.
+struct FOWSyncResult: Sendable {
+    /// Local copies of every tile file available right now.
+    let files: [URL]
+    /// Files still downloading from iCloud. They are picked up on the next sync.
+    let pendingDownloads: Int
+}
 
 /// Manages caching of FOW sync files to the local sandbox
 /// This ensures files are available offline and avoids security scope issues with child items
@@ -7,21 +16,8 @@ actor LocalFileCache {
     static let shared = LocalFileCache()
     
     private init() {}
-    
-    // MARK: - Sync Tracking
-    
-    private let lastSyncKey = "LocalFileCache.lastSyncDate"
-    
-    /// Get the last successful sync date
-    var lastSyncDate: Date? {
-        UserDefaults.standard.object(forKey: lastSyncKey) as? Date
-    }
-    
-    /// Check if sync is stale (older than given interval)
-    func isSyncStale(olderThan interval: TimeInterval = 3600) -> Bool {
-        guard let lastSync = lastSyncDate else { return true }
-        return Date().timeIntervalSince(lastSync) > interval
-    }
+
+    private static let log = Logger(subsystem: "com.novoterra.app", category: "LocalFileCache")
     
     /// Get the cache folder URL
     func getCacheFolder() throws -> URL {
@@ -37,8 +33,8 @@ actor LocalFileCache {
     
     /// Sync files from the external source folder to the local cache
     /// - Parameter sourceFolderURL: The iCloud/External folder URL
-    /// - Returns: Array of URLs to the local cached files
-    func sync(from sourceFolderURL: URL) async throws -> [URL] {
+    /// - Returns: Local cached tile files plus the number of files still downloading
+    func sync(from sourceFolderURL: URL) throws -> FOWSyncResult {
         let fileManager = FileManager.default
         let cacheFolder = try getCacheFolder()
         
@@ -47,14 +43,11 @@ actor LocalFileCache {
             try fileManager.createDirectory(at: cacheFolder, withIntermediateDirectories: true)
         }
         
-        // 1. Discover source files
-        // Check for "Sync" subfolder
-        var effectiveSource = sourceFolderURL
-        let syncSubfolder = sourceFolderURL.appendingPathComponent("Sync")
-        if fileManager.fileExists(atPath: syncSubfolder.path) {
-            effectiveSource = syncSubfolder
-        }
-        
+        // 1. Discover source files.
+        // Users often pick the parent "Fog of World" folder or one above it,
+        // so look for the folder that actually contains tile files.
+        let effectiveSource = Self.findTileFolder(in: sourceFolderURL) ?? sourceFolderURL
+
         // Get contents with iCloud download status
         let sourceContents = try fileManager.contentsOfDirectory(
             at: effectiveSource,
@@ -64,28 +57,26 @@ actor LocalFileCache {
                 .ubiquitousItemDownloadingStatusKey,
                 .ubiquitousItemIsDownloadingKey
             ],
-            options: [.skipsHiddenFiles]
+            // Not skipping hidden files: undownloaded iCloud items appear as hidden ".name.icloud" placeholders.
+            options: []
         )
         
-        // Filter for potential tile files
+        // Keep only tile files. iCloud placeholders for files not yet downloaded are
+        // hidden ".name.icloud" entries, so they are matched by their real name too.
         let sourceFiles = sourceContents.filter { url in
-            let filename = url.lastPathComponent
-            guard filename.count >= 7 else { return false }
-            let ext = url.pathExtension.lowercased()
-            if ["json", "plist", "txt", "log", "db", "sqlite", "ds_store"].contains(ext) {
-                return false
-            }
-            return true
+            FOWParser.isTileFilename(Self.realFilename(url))
         }
-        
-        print("LocalFileCache: Found \(sourceFiles.count) potential tile files to sync")
+
+        Self.log.info("Found \(sourceFiles.count) tile files to sync")
         
         // 2. Sync loop - handle iCloud downloads and changed files
         var validLocalFiles: [URL] = []
         var downloadsPending = 0
         
-        for sourceURL in sourceFiles {
-            let filename = sourceURL.lastPathComponent
+        for listedURL in sourceFiles {
+            let filename = Self.realFilename(listedURL)
+            // Always address the real item, not its ".icloud" placeholder.
+            let sourceURL = effectiveSource.appendingPathComponent(filename)
             let destinationURL = cacheFolder.appendingPathComponent(filename)
             
             // Check if file needs to be downloaded from iCloud first
@@ -101,9 +92,8 @@ actor LocalFileCache {
                 do {
                     try fileManager.startDownloadingUbiquitousItem(at: sourceURL)
                     downloadsPending += 1
-                    print("LocalFileCache: Triggered download for \(filename)")
                 } catch {
-                    print("LocalFileCache: Could not trigger download for \(filename): \(error)")
+                    Self.log.error("Could not trigger download for \(filename): \(error.localizedDescription)")
                 }
                 // IMPORTANT: If we have an existing cached copy, keep it!
                 if fileManager.fileExists(atPath: destinationURL.path) {
@@ -115,7 +105,6 @@ actor LocalFileCache {
             // If file is currently downloading, skip for now but keep existing cache
             if resourceValues?.ubiquitousItemIsDownloading == true {
                 downloadsPending += 1
-                print("LocalFileCache: \(filename) is still downloading, skipping")
                 // IMPORTANT: If we have an existing cached copy, keep it!
                 if fileManager.fileExists(atPath: destinationURL.path) {
                     validLocalFiles.append(destinationURL)
@@ -132,17 +121,19 @@ actor LocalFileCache {
                 
                 // Copy
                 try fileManager.copyItem(at: sourceURL, to: destinationURL)
-                print("LocalFileCache: Synced \(filename)")
             }
             
             validLocalFiles.append(destinationURL)
         }
         
-        if downloadsPending > 0 {
-            print("LocalFileCache: \(downloadsPending) files pending download from iCloud")
+        // 3. Cleanup orphaned files in cache.
+        // An empty listing usually means iCloud hasn't populated the folder yet,
+        // not that the user deleted everything, so keep the cache in that case.
+        guard !sourceFiles.isEmpty else {
+            let cached = (try? fileManager.contentsOfDirectory(at: cacheFolder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+            return FOWSyncResult(files: cached.filter { FOWParser.isTileFilename($0.lastPathComponent) }, pendingDownloads: downloadsPending)
         }
-        
-        // 3. Cleanup orphaned files in cache
+
         let cachedContents = try fileManager.contentsOfDirectory(
             at: cacheFolder,
             includingPropertiesForKeys: nil,
@@ -154,16 +145,45 @@ actor LocalFileCache {
         for cachedURL in cachedContents {
             if !validFilenames.contains(cachedURL.lastPathComponent) {
                 try fileManager.removeItem(at: cachedURL)
-                print("LocalFileCache: Removed orphaned file \(cachedURL.lastPathComponent)")
             }
         }
         
-        // Update last sync timestamp
-        UserDefaults.standard.set(Date(), forKey: lastSyncKey)
         
-        print("LocalFileCache: Sync complete - \(validLocalFiles.count) files in cache")
-        
-        return validLocalFiles
+        Self.log.info("Sync complete: \(validLocalFiles.count) files cached, \(downloadsPending) pending")
+
+        return FOWSyncResult(files: validLocalFiles, pendingDownloads: downloadsPending)
+    }
+
+    /// Breadth-first search (up to 3 levels deep) for the first folder holding tile files.
+    /// The "Sync" subfolder, where Fog of World keeps its data, is checked first at each level.
+    private static func findTileFolder(in root: URL, maxDepth: Int = 3) -> URL? {
+        let fileManager = FileManager.default
+        var queue: [(URL, Int)] = [(root, 0)]
+        while !queue.isEmpty {
+            let (folder, depth) = queue.removeFirst()
+            guard let contents = try? fileManager.contentsOfDirectory(
+                at: folder, includingPropertiesForKeys: [.isDirectoryKey], options: []
+            ) else { continue }
+
+            if contents.contains(where: { FOWParser.isTileFilename(realFilename($0)) }) {
+                return folder
+            }
+            guard depth < maxDepth else { continue }
+            let subfolders = contents
+                .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+                .sorted { a, _ in a.lastPathComponent == "Sync" }
+            queue.append(contentsOf: subfolders.map { ($0, depth + 1) })
+        }
+        return nil
+    }
+
+    /// Filename with the iCloud placeholder wrapping (".name.icloud") removed.
+    private static func realFilename(_ url: URL) -> String {
+        let name = url.lastPathComponent
+        if name.hasPrefix("."), name.hasSuffix(".icloud") {
+            return String(name.dropFirst().dropLast(".icloud".count))
+        }
+        return name
     }
     
     /// Check if we need to copy the file (missing or modified)
@@ -197,7 +217,6 @@ actor LocalFileCache {
                 return false
             }
         } catch {
-            print("LocalFileCache: Error comparing files: \(error)")
             return true // Fail safe: copy
         }
         

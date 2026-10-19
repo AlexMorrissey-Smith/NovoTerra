@@ -14,7 +14,8 @@ enum NavigationHandoff {
         origin: CLLocationCoordinate2D?,
         destination: CLLocationCoordinate2D,
         destinationName: String,
-        mode: TravelMode
+        mode: TravelMode,
+        avoiding avoidance: RouteAvoidance = .none
     ) {
         let waypoints = option.handoffWaypoints(maxCount: app.maxWaypoints, spacingMeters: mode.waypointSpacingMeters)
 
@@ -22,7 +23,7 @@ enum NavigationHandoff {
         case .appleMaps:
             openAppleMaps(origin: origin, waypoints: waypoints, destination: destination, destinationName: destinationName, mode: mode)
         case .googleMaps:
-            openGoogleMaps(origin: origin, waypoints: waypoints, destination: destination, mode: mode)
+            openGoogleMaps(origin: origin, waypoints: waypoints, destination: destination, mode: mode, avoidance: avoidance)
         }
     }
 
@@ -35,6 +36,8 @@ enum NavigationHandoff {
         destinationName: String,
         mode: TravelMode
     ) {
+        // Apple Maps has no launch option to avoid tolls or highways. The via stops keep it on
+        // the planned roads; between stops it follows the user's own Maps settings.
         // The first item is the start, the last is the destination, and anything between is a stop.
         let start: MKMapItem = origin.map { MKMapItem(placemark: MKPlacemark(coordinate: $0)) } ?? .forCurrentLocation()
         if origin != nil { start.name = "Start" }
@@ -60,7 +63,8 @@ enum NavigationHandoff {
         origin: CLLocationCoordinate2D?,
         waypoints: [CLLocationCoordinate2D],
         destination: CLLocationCoordinate2D,
-        mode: TravelMode
+        mode: TravelMode,
+        avoidance: RouteAvoidance
     ) {
         // Docs: https://developers.google.com/maps/documentation/urls/get-started
         var components = URLComponents(string: "https://www.google.com/maps/dir/")!
@@ -72,6 +76,9 @@ enum NavigationHandoff {
         // Omitting origin makes Google Maps start from the current location.
         if let origin {
             items.append(URLQueryItem(name: "origin", value: format(origin)))
+        }
+        if mode == .driving, let avoid = avoidance.googleMapsValue {
+            items.append(URLQueryItem(name: "avoid", value: avoid))
         }
         if !waypoints.isEmpty {
             items.append(URLQueryItem(name: "waypoints", value: waypoints.map(format).joined(separator: "|")))

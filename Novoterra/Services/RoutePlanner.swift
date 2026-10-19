@@ -61,6 +61,7 @@ final class RoutePlanner: ObservableObject {
         from origin: CLLocationCoordinate2D,
         to destination: CLLocationCoordinate2D,
         mode: TravelMode,
+        avoiding avoidance: RouteAvoidance = .none,
         index: FOWSpatialIndex
     ) {
         currentTask?.cancel()
@@ -71,7 +72,7 @@ final class RoutePlanner: ObservableObject {
         currentTask = Task {
             do {
                 let hasFogData = await index.tileCount > 0
-                let result = try await Self.computeOptions(from: origin, to: destination, mode: mode, index: index)
+                let result = try await Self.computeOptions(from: origin, to: destination, mode: mode, avoidance: avoidance, index: index)
                 try Task.checkCancellation()
                 options = result
                 scoredWithoutFogData = !hasFogData
@@ -130,10 +131,11 @@ final class RoutePlanner: ObservableObject {
         from origin: CLLocationCoordinate2D,
         to destination: CLLocationCoordinate2D,
         mode: TravelMode,
+        avoidance: RouteAvoidance,
         index: FOWSpatialIndex
     ) async throws -> [RouteOption] {
         // Pass 1: Apple's own alternatives. These anchor the "fastest" baseline.
-        let direct = try await requestRoutes(from: origin, to: destination, mode: mode, alternates: true)
+        let direct = try await requestRoutes(from: origin, to: destination, mode: mode, avoidance: avoidance, alternates: true)
         try Task.checkCancellation()
         guard let fastestDirect = direct.min(by: { $0.expectedTravelTime < $1.expectedTravelTime }) else {
             throw PlannerError.noRoutes
@@ -144,7 +146,7 @@ final class RoutePlanner: ObservableObject {
         // Pass 2: force routes through the least-explored parts of the corridor.
         let waypoints = await detourWaypoints(from: origin, to: destination, roadDistance: fastestDirect.distance, index: index)
         try Task.checkCancellation()
-        candidates += await routesVia(waypoints, from: origin, to: destination, mode: mode)
+        candidates += await routesVia(waypoints, from: origin, to: destination, mode: mode, avoidance: avoidance)
         try Task.checkCancellation()
 
         // Score every candidate by distance-weighted visited coverage.
@@ -211,7 +213,8 @@ final class RoutePlanner: ObservableObject {
         _ waypoints: [CLLocationCoordinate2D],
         from origin: CLLocationCoordinate2D,
         to destination: CLLocationCoordinate2D,
-        mode: TravelMode
+        mode: TravelMode,
+        avoidance: RouteAvoidance
     ) async -> [[MKRoute]] {
         var results: [[MKRoute]] = []
         var remaining = waypoints[...]
@@ -225,8 +228,8 @@ final class RoutePlanner: ObservableObject {
                 for waypoint in batch {
                     group.addTask {
                         do {
-                            async let leg1 = requestRoutes(from: origin, to: waypoint, mode: mode, alternates: false)
-                            async let leg2 = requestRoutes(from: waypoint, to: destination, mode: mode, alternates: false)
+                            async let leg1 = requestRoutes(from: origin, to: waypoint, mode: mode, avoidance: avoidance, alternates: false)
+                            async let leg2 = requestRoutes(from: waypoint, to: destination, mode: mode, avoidance: avoidance, alternates: false)
                             let (first, second) = try await (leg1, leg2)
                             guard let a = first.first, let b = second.first else { return .success([]) }
                             return .success([a, b])
@@ -327,6 +330,7 @@ final class RoutePlanner: ObservableObject {
         from origin: CLLocationCoordinate2D,
         to destination: CLLocationCoordinate2D,
         mode: TravelMode,
+        avoidance: RouteAvoidance,
         alternates: Bool
     ) async throws -> [MKRoute] {
         let request = MKDirections.Request()
@@ -334,6 +338,10 @@ final class RoutePlanner: ObservableObject {
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
         request.transportType = mode.transportType
         request.requestsAlternateRoutes = alternates
+        if mode == .driving {
+            request.tollPreference = avoidance.tolls ? .avoid : .any
+            request.highwayPreference = avoidance.highways ? .avoid : .any
+        }
         // Cancelling the Swift task doesn't stop an MKDirections request, which would
         // still count against MapKit's rate limit, so cancel it explicitly.
         let directions = MKDirections(request: request)

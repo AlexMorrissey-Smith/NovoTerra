@@ -41,6 +41,22 @@ struct FOWTile: Sendable {
     }
 }
 
+// MARK: - Road Avoidance
+
+/// Road types the user wants routes to avoid. Applies to driving only.
+struct RouteAvoidance: Equatable, Sendable {
+    var tolls = false
+    var highways = false
+
+    static let none = RouteAvoidance()
+
+    /// Value for the Google Maps URL `avoid` parameter, or nil if nothing is avoided.
+    var googleMapsValue: String? {
+        let values = [tolls ? "tolls" : nil, highways ? "highways" : nil].compactMap { $0 }
+        return values.isEmpty ? nil : values.joined(separator: ",")
+    }
+}
+
 // MARK: - Travel Mode
 enum TravelMode: String, CaseIterable, Identifiable, Sendable {
     case driving = "Drive"

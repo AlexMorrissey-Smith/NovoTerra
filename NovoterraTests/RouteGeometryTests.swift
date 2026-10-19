@@ -59,6 +59,12 @@ final class RouteGeometryTests: XCTestCase {
         XCTAssertEqual(capped.count, 2)
     }
 
+    func testAvoidanceBuildsGoogleMapsValue() {
+        XCTAssertNil(RouteAvoidance.none.googleMapsValue)
+        XCTAssertEqual(RouteAvoidance(tolls: true).googleMapsValue, "tolls")
+        XCTAssertEqual(RouteAvoidance(tolls: true, highways: true).googleMapsValue, "tolls,highways")
+    }
+
     func testPixelCoordinateRoundTrip() {
         let (gx, gy) = MercatorProjection.lngLatToGlobalPixel(lng: london.longitude, lat: london.latitude)
         let back = MercatorProjection.globalPixelToCoordinate(x: gx, y: gy)

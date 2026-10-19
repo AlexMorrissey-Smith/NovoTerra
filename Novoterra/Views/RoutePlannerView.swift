@@ -26,6 +26,8 @@ struct RoutePlannerView: View {
 
     @AppStorage("travelMode") private var travelMode: TravelMode = .driving
     @AppStorage("showFog") private var showFog = true
+    @AppStorage("avoidTolls") private var avoidTolls = false
+    @AppStorage("avoidHighways") private var avoidHighways = false
     @AppStorage("routeSortingPreference") private var routeSortingPref: RouteSortingPreference = .newDistance
     @AppStorage("preferredNavigationApp") private var preferredNavApp: NavigationAppPreference = .showBoth
 
@@ -34,6 +36,10 @@ struct RoutePlannerView: View {
     }
 
     // MARK: - Derived State
+
+    private var avoidance: RouteAvoidance {
+        RouteAvoidance(tolls: avoidTolls, highways: avoidHighways)
+    }
 
     private var levelRoutes: [RouteOption] {
         routePlanner.routes(for: selectedLevel, sortedBy: routeSortingPref)
@@ -92,6 +98,7 @@ struct RoutePlannerView: View {
         }
         .toolbarBackground(.hidden, for: .tabBar)
         .onChange(of: travelMode) { _, _ in planIfReady() }
+        .onChange(of: avoidance) { _, _ in planIfReady() }
         // New fog data: re-score the routes already shown (keeping the selection),
         // or plan for the first time if nothing was planned yet.
         .onChange(of: fowDataManager.dataVersion) { _, _ in
@@ -418,7 +425,8 @@ struct RoutePlannerView: View {
                 origin: origin.isCurrentLocation ? nil : resolvedOrigin,
                 destination: dest,
                 destinationName: destination?.name ?? "Destination",
-                mode: travelMode
+                mode: travelMode,
+                avoiding: avoidance
             )
         } label: {
             Label(title, systemImage: systemImage)
@@ -462,7 +470,7 @@ struct RoutePlannerView: View {
             routePlanner.clear()
             return
         }
-        routePlanner.plan(from: orig, to: dest, mode: travelMode, index: fowDataManager.spatialIndex)
+        routePlanner.plan(from: orig, to: dest, mode: travelMode, avoiding: avoidance, index: fowDataManager.spatialIndex)
     }
 
     private func moveCamera(to position: MapCameraPosition) {

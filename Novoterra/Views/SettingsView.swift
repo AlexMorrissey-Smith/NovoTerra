@@ -9,6 +9,8 @@ struct SettingsView: View {
     @AppStorage("preferredNavigationApp") private var preferredNavApp: NavigationAppPreference = .showBoth
     @AppStorage("routeSortingPreference") private var routeSortingPreference: RouteSortingPreference = .newDistance
     @AppStorage("showFog") private var showFog = true
+    @AppStorage("avoidTolls") private var avoidTolls = false
+    @AppStorage("avoidHighways") private var avoidHighways = false
     
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -87,6 +89,15 @@ struct SettingsView: View {
                     }
                 }
                 
+                Section {
+                    Toggle("Avoid Tolls", isOn: $avoidTolls)
+                    Toggle("Avoid Motorways", isOn: $avoidHighways)
+                } header: {
+                    Text("Driving")
+                } footer: {
+                    Text("Used when planning driving routes and when opening them in Google Maps. Apple Maps doesn't accept these from other apps; it follows the via stops, and uses your settings in Settings > Apps > Maps between them.")
+                }
+
                 Section("Map") {
                     Toggle("Show Fog", isOn: $showFog)
                 }

@@ -7,6 +7,7 @@ An iOS app that reads your Fog of World sync data from iCloud Drive and plans ro
 - **Exploration routing**: finds routes that cover the most unexplored ground.
 - **Three exploration levels**: Balanced, Adventurous and Exploration allow up to 20%, 50% and 100% more travel time than the fastest route.
 - **Drive, cycle or walk**: routes and handoff use the chosen travel mode.
+- **Avoid tolls or motorways**: driving routes can skip toll roads and motorways. Google Maps handoff keeps the preference; Apple Maps doesn't accept it from other apps.
 - **Fog overlay**: the map is fogged everywhere except where your Fog of World tracks have been.
 - **Compared with the fastest route**: each route card shows the extra time and the extra new distance.
 - **Navigation handoff**: opens the route in Apple Maps or Google Maps with intermediate stops so the external app follows it.

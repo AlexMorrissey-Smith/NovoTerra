@@ -82,9 +82,33 @@ final class RoutePlanner: ObservableObject {
                 // MapKit reports cancelled requests as its own errors.
                 if Task.isCancelled { return }
                 Self.log.error("Planning failed: \(error.localizedDescription)")
-                self.error = error
+                if let mapKitError = error as? MKError, mapKitError.code == .loadingThrottled {
+                    self.error = PlannerError.throttled
+                } else {
+                    self.error = error
+                }
             }
             isCalculating = false
+        }
+    }
+
+    /// Score the current routes again against updated fog data, without new MapKit requests.
+    /// Route IDs are kept so the user's selected route stays selected.
+    func rescore(index: FOWSpatialIndex) {
+        guard !options.isEmpty, !isCalculating else { return }
+        let previous = options
+        currentTask?.cancel()
+        currentTask = Task {
+            let hasFogData = await index.tileCount > 0
+            var scored: [RouteOption] = []
+            for old in previous {
+                guard var option = await Self.score(legs: old.legs, index: index) else { continue }
+                option.id = old.id
+                scored.append(option)
+            }
+            guard !Task.isCancelled else { return }
+            options = Self.rank(scored)
+            scoredWithoutFogData = !hasFogData
         }
     }
 
@@ -310,7 +334,14 @@ final class RoutePlanner: ObservableObject {
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
         request.transportType = mode.transportType
         request.requestsAlternateRoutes = alternates
-        return try await MKDirections(request: request).calculate().routes
+        // Cancelling the Swift task doesn't stop an MKDirections request, which would
+        // still count against MapKit's rate limit, so cancel it explicitly.
+        let directions = MKDirections(request: request)
+        return try await withTaskCancellationHandler {
+            try await directions.calculate().routes
+        } onCancel: {
+            directions.cancel()
+        }
     }
 }
 
@@ -318,10 +349,12 @@ final class RoutePlanner: ObservableObject {
 
 enum PlannerError: Error, LocalizedError {
     case noRoutes
+    case throttled
 
     var errorDescription: String? {
         switch self {
         case .noRoutes: return "No routes found for this trip. Try another travel mode or destination."
+        case .throttled: return "Apple Maps is limiting route requests. Wait a minute, then try again."
         }
     }
 }

@@ -7,7 +7,6 @@ import Combine
 class LocationSearchService: NSObject, ObservableObject {
     
     @Published var searchResults: [MKLocalSearchCompletion] = []
-    @Published var isSearching = false
     
     private let completer: MKLocalSearchCompleter
     
@@ -23,7 +22,6 @@ class LocationSearchService: NSObject, ObservableObject {
             searchResults = []
             return
         }
-        isSearching = true
         completer.queryFragment = query
     }
     
@@ -42,16 +40,12 @@ extension LocationSearchService: MKLocalSearchCompleterDelegate {
     nonisolated func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         let results = completer.results
         Task { @MainActor in
-            self.isSearching = false
             self.searchResults = results
         }
     }
     
     nonisolated func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
-        Task { @MainActor in
-            self.isSearching = false
-            print("Search completer error: \(error)")
-        }
+        // Partial queries often fail; the next keystroke retries, so keep the last results.
     }
 }
 

@@ -22,8 +22,10 @@ struct NovoterraApp: App {
                 }
         }
         .onChange(of: scenePhase) { _, phase in
-            // Pick up new Fog of World tracks when returning to the app.
-            guard phase == .active, fowDataManager.isReady, let folderURL = iCloudManager.syncFolderURL else { return }
+            // Pick up new Fog of World tracks when returning to the app,
+            // or retry a load that failed.
+            guard phase == .active, fowDataManager.isReady || fowDataManager.error != nil,
+                  let folderURL = iCloudManager.syncFolderURL else { return }
             Task { await fowDataManager.refreshIfStale(from: folderURL) }
         }
     }

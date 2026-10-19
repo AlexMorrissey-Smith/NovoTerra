@@ -6,9 +6,16 @@ import CoreLocation
 
 class LocationManagerService: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var location: CLLocationCoordinate2D?
+    @Published private(set) var authorizationStatus: CLAuthorizationStatus
     private let manager = CLLocationManager()
+
+    /// True when the user has turned location off for this app, or it's restricted.
+    var isDenied: Bool {
+        authorizationStatus == .denied || authorizationStatus == .restricted
+    }
     
     override init() {
+        authorizationStatus = manager.authorizationStatus
         super.init()
         manager.delegate = self
         // Route planning only needs street-level accuracy; finer updates waste battery
@@ -21,6 +28,20 @@ class LocationManagerService: NSObject, ObservableObject, CLLocationManagerDeleg
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         location = locations.last?.coordinate
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
+        if isDenied {
+            location = nil
+        } else {
+            manager.startUpdatingLocation()
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Temporary failures (no fix yet) are retried by Core Location; denial arrives
+        // through the authorization callback, so there's nothing more to do here.
     }
 }
 

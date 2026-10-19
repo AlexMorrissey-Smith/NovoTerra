@@ -7,6 +7,19 @@ struct FOWSyncResult: Sendable {
     let files: [URL]
     /// Files still downloading from iCloud. They are picked up on the next sync.
     let pendingDownloads: Int
+    /// True if any cached file was added, replaced or removed by this sync.
+    let changed: Bool
+}
+
+enum FOWSyncError: Error, LocalizedError {
+    case noTilesFound
+
+    var errorDescription: String? {
+        switch self {
+        case .noTilesFound:
+            return "No Fog of World tiles found in this folder. Choose the Fog of World folder in iCloud Drive."
+        }
+    }
 }
 
 /// Manages caching of FOW sync files to the local sandbox
@@ -30,6 +43,17 @@ actor LocalFileCache {
         )
         return appSupport.appendingPathComponent("FOWCache", isDirectory: true)
     }
+
+    /// Delete every cached tile, for example when the user disconnects their data.
+    func clear() throws {
+        let cacheFolder = try getCacheFolder()
+        if FileManager.default.fileExists(atPath: cacheFolder.path) {
+            try FileManager.default.removeItem(at: cacheFolder)
+        }
+    }
+
+    /// Hidden file in the cache recording which source folder the tiles came from.
+    private static let sourceMarkerName = ".source"
     
     /// Sync files from the external source folder to the local cache
     /// - Parameter sourceFolderURL: The iCloud/External folder URL
@@ -38,15 +62,27 @@ actor LocalFileCache {
         let fileManager = FileManager.default
         let cacheFolder = try getCacheFolder()
         
-        // Create cache dir if needed
-        if !fileManager.fileExists(atPath: cacheFolder.path) {
-            try fileManager.createDirectory(at: cacheFolder, withIntermediateDirectories: true)
-        }
-        
         // 1. Discover source files.
         // Users often pick the parent "Fog of World" folder or one above it,
         // so look for the folder that actually contains tile files.
-        let effectiveSource = Self.findTileFolder(in: sourceFolderURL) ?? sourceFolderURL
+        guard let effectiveSource = Self.findTileFolder(in: sourceFolderURL) else {
+            throw FOWSyncError.noTilesFound
+        }
+
+        // The cache belongs to one source folder. Switching folders starts it afresh,
+        // so tiles from the previous folder never mix with the new one.
+        let markerURL = cacheFolder.appendingPathComponent(Self.sourceMarkerName)
+        let sourceKey = effectiveSource.standardizedFileURL.path
+        var changed = false
+        if (try? String(contentsOf: markerURL, encoding: .utf8)) != sourceKey {
+            try clear()
+            changed = true
+        }
+
+        if !fileManager.fileExists(atPath: cacheFolder.path) {
+            try fileManager.createDirectory(at: cacheFolder, withIntermediateDirectories: true)
+        }
+        try sourceKey.write(to: markerURL, atomically: true, encoding: .utf8)
 
         // Get contents with iCloud download status
         let sourceContents = try fileManager.contentsOfDirectory(
@@ -112,28 +148,31 @@ actor LocalFileCache {
                 continue
             }
             
-            // File is available locally (either downloaded or not in iCloud)
+            // File is available locally (either downloaded or not in iCloud).
+            // A failure here affects only this tile; keep any older cached copy and carry on.
             if shouldCopy(source: sourceURL, destination: destinationURL) {
-                // Remove existing if needed
-                if fileManager.fileExists(atPath: destinationURL.path) {
-                    try fileManager.removeItem(at: destinationURL)
+                do {
+                    let staging = cacheFolder.appendingPathComponent(".\(filename).partial")
+                    try? fileManager.removeItem(at: staging)
+                    try fileManager.copyItem(at: sourceURL, to: staging)
+                    if fileManager.fileExists(atPath: destinationURL.path) {
+                        _ = try fileManager.replaceItemAt(destinationURL, withItemAt: staging)
+                    } else {
+                        try fileManager.moveItem(at: staging, to: destinationURL)
+                    }
+                    changed = true
+                } catch {
+                    try? fileManager.removeItem(at: cacheFolder.appendingPathComponent(".\(filename).partial"))
+                    Self.log.error("Could not copy \(filename): \(error.localizedDescription)")
                 }
-                
-                // Copy
-                try fileManager.copyItem(at: sourceURL, to: destinationURL)
             }
-            
-            validLocalFiles.append(destinationURL)
+
+            if fileManager.fileExists(atPath: destinationURL.path) {
+                validLocalFiles.append(destinationURL)
+            }
         }
         
         // 3. Cleanup orphaned files in cache.
-        // An empty listing usually means iCloud hasn't populated the folder yet,
-        // not that the user deleted everything, so keep the cache in that case.
-        guard !sourceFiles.isEmpty else {
-            let cached = (try? fileManager.contentsOfDirectory(at: cacheFolder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
-            return FOWSyncResult(files: cached.filter { FOWParser.isTileFilename($0.lastPathComponent) }, pendingDownloads: downloadsPending)
-        }
-
         let cachedContents = try fileManager.contentsOfDirectory(
             at: cacheFolder,
             includingPropertiesForKeys: nil,
@@ -144,14 +183,15 @@ actor LocalFileCache {
         
         for cachedURL in cachedContents {
             if !validFilenames.contains(cachedURL.lastPathComponent) {
-                try fileManager.removeItem(at: cachedURL)
+                try? fileManager.removeItem(at: cachedURL)
+                changed = true
             }
         }
         
         
         Self.log.info("Sync complete: \(validLocalFiles.count) files cached, \(downloadsPending) pending")
 
-        return FOWSyncResult(files: validLocalFiles, pendingDownloads: downloadsPending)
+        return FOWSyncResult(files: validLocalFiles, pendingDownloads: downloadsPending, changed: changed)
     }
 
     /// Breadth-first search (up to 3 levels deep) for the first folder holding tile files.

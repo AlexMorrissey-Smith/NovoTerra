@@ -94,7 +94,7 @@ enum TravelMode: String, CaseIterable, Identifiable, Sendable {
 
 // MARK: - Route Option
 struct RouteOption: Identifiable {
-    let id = UUID()
+    var id = UUID()
     /// One leg for direct routes; two legs for routes forced through an unexplored waypoint.
     let legs: [MKRoute]
     let totalDistanceMeters: Double

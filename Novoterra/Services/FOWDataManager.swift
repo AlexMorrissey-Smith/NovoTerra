@@ -18,7 +18,8 @@ class FOWDataManager: ObservableObject {
     @Published var error: Error?
     /// True once at least one load has finished, so routes can be scored.
     @Published private(set) var isReady = false
-    /// Incremented whenever the index changes, so the fog overlay knows to redraw.
+    /// Incremented only when the indexed tiles actually change, so the fog overlay
+    /// redraws and routes are re-scored. A sync that finds nothing new leaves it alone.
     @Published private(set) var dataVersion = 0
 
     // MARK: - Index
@@ -48,6 +49,13 @@ class FOWDataManager: ObservableObject {
                 }.value
                 try Task.checkCancellation()
 
+                self.pendingDownloads = result.pendingDownloads
+                self.lastSyncDate = Date()
+                guard result.changed || !self.isReady else {
+                    Self.log.info("Sync found no changes")
+                    return
+                }
+
                 // Building the index only decodes filenames; tiles are decompressed on demand.
                 let metadata = result.files.compactMap { url -> FOWTileMetadata? in
                     guard let id = try? FOWParser.decodeFilename(url.lastPathComponent) else { return nil }
@@ -58,13 +66,21 @@ class FOWDataManager: ObservableObject {
                 try Task.checkCancellation()
 
                 self.tileCount = metadata.count
-                self.pendingDownloads = result.pendingDownloads
-                self.lastSyncDate = Date()
                 self.isReady = true
                 self.dataVersion += 1
                 Self.log.info("Indexed \(metadata.count) tiles")
             } catch is CancellationError {
                 return
+            } catch FOWSyncError.noTilesFound {
+                // The chosen folder has no tiles, so stop showing fog from any earlier folder.
+                Self.log.error("No tiles found in \(folderURL.path)")
+                await spatialIndex.replaceTiles([])
+                self.tileCount = 0
+                self.pendingDownloads = 0
+                self.lastSyncDate = Date()
+                self.isReady = true
+                self.dataVersion += 1
+                self.error = FOWSyncError.noTilesFound
             } catch {
                 Self.log.error("Load failed: \(error.localizedDescription)")
                 self.error = error
@@ -88,16 +104,23 @@ class FOWDataManager: ObservableObject {
         await loadData(from: folderURL)
     }
 
-    /// Forget all data, for example after disconnecting the folder.
+    /// Forget all data, including the cached copies of the user's location history,
+    /// for example after disconnecting the folder.
     func reset() async {
         loadTask?.cancel()
         loadTask = nil
         await spatialIndex.replaceTiles([])
+        do {
+            try await LocalFileCache.shared.clear()
+        } catch {
+            Self.log.error("Could not delete cached tiles: \(error.localizedDescription)")
+        }
         isLoading = false
         isReady = false
         tileCount = 0
         pendingDownloads = 0
         lastSyncDate = nil
+        error = nil
         dataVersion += 1
     }
 

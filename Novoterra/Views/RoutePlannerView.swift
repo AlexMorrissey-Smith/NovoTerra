@@ -9,6 +9,7 @@ struct RoutePlannerView: View {
 
     @StateObject private var locationManager = LocationManagerService()
     @StateObject private var routePlanner = RoutePlanner()
+    @Environment(\.openURL) private var openURL
 
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var cameraRequestID = 0
@@ -44,6 +45,11 @@ struct RoutePlannerView: View {
 
     private var resolvedOrigin: CLLocationCoordinate2D? {
         origin.isCurrentLocation ? locationManager.location : origin.coordinate
+    }
+
+    /// True when either end of the trip is the user's current location.
+    private var needsCurrentLocation: Bool {
+        origin.isCurrentLocation || destination?.isCurrentLocation == true
     }
 
     private var resolvedDestination: CLLocationCoordinate2D? {
@@ -86,8 +92,21 @@ struct RoutePlannerView: View {
         }
         .toolbarBackground(.hidden, for: .tabBar)
         .onChange(of: travelMode) { _, _ in planIfReady() }
-        // Re-score when fog data finishes loading or changes after a sync.
-        .onChange(of: fowDataManager.dataVersion) { _, _ in planIfReady() }
+        // New fog data: re-score the routes already shown (keeping the selection),
+        // or plan for the first time if nothing was planned yet.
+        .onChange(of: fowDataManager.dataVersion) { _, _ in
+            if routePlanner.options.isEmpty {
+                planIfReady()
+            } else {
+                routePlanner.rescore(index: fowDataManager.spatialIndex)
+            }
+        }
+        // A first load that fails never changes dataVersion, so plan once loading stops.
+        .onChange(of: fowDataManager.isLoading) { _, isLoading in
+            if !isLoading, routePlanner.options.isEmpty, !routePlanner.isCalculating, routePlanner.error == nil {
+                planIfReady()
+            }
+        }
         // Plan as soon as the first location fix arrives, if we were waiting for it.
         .onChange(of: locationManager.location != nil) { _, hasLocation in
             if hasLocation, routePlanner.options.isEmpty, !routePlanner.isCalculating { planIfReady() }
@@ -286,7 +305,19 @@ struct RoutePlannerView: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 24)
-                } else if resolvedOrigin == nil {
+                } else if needsCurrentLocation && locationManager.isDenied {
+                    ContentUnavailableView {
+                        Label("Location is off", systemImage: "location.slash")
+                    } description: {
+                        Text("Allow location access in Settings, or choose a start point.")
+                    } actions: {
+                        Button("Open Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                        }
+                        Button("Choose Start Point") { openSearch(.origin) }
+                    }
+                    .frame(height: 220)
+                } else if resolvedOrigin == nil || resolvedDestination == nil {
                     Label("Waiting for your location…", systemImage: "location")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

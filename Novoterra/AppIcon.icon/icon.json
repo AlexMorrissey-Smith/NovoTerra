@@ -6,10 +6,10 @@
     {
       "layers" : [
         {
-          "image-name" : "Gemini_Generated_Image_kkgad0kkgad0kkga-topaz-upscale-2x-sharpen-denoise.png",
-          "name" : "Gemini_Generated_Image_kkgad0kkgad0kkga-topaz-upscale-2x-sharpen-denoise",
+          "image-name" : "Foreground.png",
+          "name" : "Foreground",
           "position" : {
-            "scale" : 0.33,
+            "scale" : 0.99,
             "translation-in-points" : [
               0,
               -39

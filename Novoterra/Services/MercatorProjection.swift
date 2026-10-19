@@ -47,12 +47,6 @@ enum MercatorProjection {
         )
     }
 
-    /// Convenience: coordinate to full breakdown
-    static func coordinateToComponents(_ coord: CLLocationCoordinate2D) -> TileBlockPixel {
-        let (gx, gy) = lngLatToGlobalPixel(lng: coord.longitude, lat: coord.latitude)
-        return globalPixelToComponents(gx, gy)
-    }
-
     /// Ground size of one FOW pixel at the given latitude (about 9.6 m at the equator, 6 m in the UK).
     static func metersPerPixel(atLatitude lat: Double) -> Double {
         EARTH_CIRCUMFERENCE_METERS * cos(lat * .pi / 180) / Double(WORLD_PIXELS)

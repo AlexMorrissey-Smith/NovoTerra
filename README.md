@@ -27,7 +27,9 @@ An iOS app that reads your Fog of World sync data from iCloud Drive and plans ro
 
 ## Tests
 
-The `NovoTerraTests` target holds logic tests. They compile the model and service code directly and use the sample sync files in `FOW File Examples/` as fixtures.
+The `NovoTerraTests` target holds logic tests. They compile the model and service code directly.
+
+The Fog of World tests need real sync files as fixtures. Those files are personal location history, so they are not in the repository: `FOW File Examples/` is gitignored. To run those tests, copy some tile files from your own Fog of World `Sync` folder into `FOW File Examples/`, or point `FOW_FIXTURES_DIR` at a folder that holds them. Without fixtures, those tests are skipped.
 
 ```bash
 xcodebuild test -project NovoTerra.xcodeproj -scheme Novoterra -destination 'platform=iOS Simulator,name=iPhone 17'

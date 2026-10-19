@@ -103,28 +103,17 @@ class iCloudFileManager: ObservableObject {
         syncFolderURL = nil
         isAccessGranted = false
     }
-    
-    deinit {
-        // Note: deinit may not run on MainActor, be careful
-        // Cleanup is handled explicitly via cleanup()
-    }
 }
 
 // MARK: - Errors
 
 enum FileAccessError: Error, LocalizedError {
     case securityScopeDenied
-    case folderNotFound
-    case readFailed
     
     var errorDescription: String? {
         switch self {
         case .securityScopeDenied:
             return "Access denied. Please grant permission to the Fog of World sync folder."
-        case .folderNotFound:
-            return "Fog of World sync folder not found."
-        case .readFailed:
-            return "Failed to read file data."
         }
     }
 }
